@@ -53,7 +53,7 @@ class Hoyolab(HyperionBase):
     ) -> List[PostRecommend]:
         resp = await self.get_new_list(gids, type_id, page_size, lang)
         data = resp["list"]
-        return [PostRecommend.parse(i, gids=gids) for i in data]
+        return [PostRecommend.parse(i, gids=gids, hoyolab=True) for i in data]
 
     async def close(self):
         await self.client.shutdown()
