@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple, TYPE_CHECKING, Union
 
 import aiofiles
 from arkowrapper import ArkoWrapper
-from bs4 import BeautifulSoup
 from httpx import Timeout
 from telegram import (
     InlineKeyboardButton,
@@ -37,11 +36,10 @@ from utils.helpers import sha1
 from utils.log import logger
 
 if TYPE_CHECKING:
-    from bs4 import Tag
     from telegram import Update, Message
     from telegram.ext import ContextTypes
 
-    from modules.apihelper.models.genshin.hyperion import PostRecommend
+    from modules.apihelper.models.genshin.hyperion import PostRecommend, PostInfo
 
 
 class PostHandlerData:
@@ -75,7 +73,7 @@ class Post(Plugin.Conversation):
     )
 
     def __init__(self, redis: RedisDB):
-        self.gids = [2]
+        self.gids = [(3, 12)]
         self.ffmpeg_enable = False
         self.cache_dir = os.path.join(os.getcwd(), "cache")
         self.cache = redis.client
@@ -133,7 +131,7 @@ class Post(Plugin.Conversation):
 
     @SentryClient.monitor(monitor_slug="PostTaskJob")
     async def task_all(self, context: "ContextTypes.DEFAULT_TYPE"):
-        tasks = [self.task(context, PostTypeEnum.CN), self.task(context, PostTypeEnum.OS)]
+        tasks = [self.task(context, PostTypeEnum.CN)]
         await asyncio.gather(*tasks)
 
     async def task(self, context: "ContextTypes.DEFAULT_TYPE", post_type: "PostTypeEnum"):
@@ -142,8 +140,8 @@ class Post(Plugin.Conversation):
         # 请求推荐POST列表并处理
         official_recommended_posts = []
         try:
-            for gid in self.gids:
-                official_recommended_posts.extend(await bbs.get_official_recommended_posts(gid))
+            for gid, type_id in self.gids:
+                official_recommended_posts.extend(await bbs.get_official_recommended_posts(gid, type_id))
             await bbs.close()
         except APIHelperException as exc:
             logger.error("获取首页推荐信息失败 %s", str(exc))
@@ -198,37 +196,61 @@ class Post(Plugin.Conversation):
                     logger.error("发送消息失败 %s", exc.message)
 
     @staticmethod
-    def parse_post_text(soup: BeautifulSoup, post_subject: str) -> Tuple[str, bool]:
-        def parse_tag(_tag: "Tag") -> str:
-            if _tag.name == "a":
-                href = _tag.get("href")
-                if href and href.startswith("/"):
-                    href = f"https://www.miyoushe.com{href}"
-                if href and href.startswith("http"):
-                    return f"[{escape_markdown(_tag.get_text(), version=2)}]({href})"
-            return escape_markdown(_tag.get_text(), version=2)
+    def parse_post_text(post: "PostInfo") -> str:
+        format_data = post.format
+        text_slice = post.text_slice
+        link_slice = post.link_slice
 
-        post_text = f"*{escape_markdown(post_subject, version=2)}*\n\n"
-        start = True
-        too_long = False
-        if post_p := soup.find_all("p"):
-            try:
-                for p in post_p:
-                    t = p.get_text()
-                    if not t and start:
-                        continue
-                    start = False
-                    for tag in p.contents:
-                        post_text_ = post_text + parse_tag(tag)
-                        if len(post_text_) >= (MessageLimit.CAPTION_LENGTH - 55):
-                            raise RecursionError
-                        post_text = post_text_
-                    post_text += "\n"
-            except RecursionError:
-                too_long = True
-        else:
-            post_text += f"{escape_markdown(soup.get_text(), version=2)}\n"
-        return post_text.strip(), too_long
+        # 创建查找字典
+        text_dict = {item["id"]: item["c"] for item in text_slice}
+        link_dict = {item["id"]: item["c"] for item in link_slice}
+
+        markdown_lines = [f"*{escape_markdown(post.subject, version=2)}*", ""]
+
+        # 遍历格式数据
+        for item in format_data.get("data", []):
+            item_type = item.get("type")
+
+            if item_type == "paragraph":
+                contents = item.get("contents", [])
+                if not contents:
+                    # 空段落，添加空行
+                    markdown_lines.append("")
+                    continue
+
+                paragraph_text = ""
+                for content in contents:
+                    content_type = content.get("type")
+                    content_id = content.get("contentId")
+
+                    if content_type == "text":
+                        text = escape_markdown(text_dict.get(content_id, ""), version=2)
+                        if content.get("bold", False):
+                            text = f"*{text}*"
+                        paragraph_text += text
+
+                    elif content_type == "link":
+                        link_text = text_dict.get(content_id, "")
+                        if link_text.startswith("#"):
+                            link_text += " "
+                        link_text = escape_markdown(link_text, version=2)
+
+                        link_url = link_dict.get(content.get("linkId", ""), "")
+
+                        # 构建链接
+                        link_md = f"[{link_text}]({link_url})"
+
+                        # 处理加粗
+                        if content.get("bold", False):
+                            link_md = f"*{link_md}*"
+
+                        paragraph_text += link_md
+
+                if paragraph_text:
+                    markdown_lines.append(paragraph_text)
+
+        # 合并为完整文本
+        return "\n".join(markdown_lines).strip()
 
     @staticmethod
     def safe_cut(text: str, length: int) -> str:
@@ -404,18 +426,16 @@ class Post(Plugin.Conversation):
         self, post_handler_data: PostHandlerData, message: "Message", post_id: int, post_type: "PostTypeEnum"
     ) -> int:
         bbs = self.get_bbs_client(post_type)
-        post_info = await bbs.get_post_info(self.gids[0], post_id)
-        post_images = await bbs.get_images_by_post_id(self.gids[0], post_id)
+        post_info = await bbs.get_post_info(post_id)
+        post_images = await bbs.get_images_by_post_id(post_id)
         await bbs.close()
         post_images = await self.gif_to_mp4(post_images)
-        post_data = post_info["post"]["post"]
-        post_subject = post_data["subject"]
+        post_subject = post_info.subject
         post_tags = self.get_tags_by_subject(post_subject)
-        post_soup = BeautifulSoup(post_info.content, features="html.parser")
-        post_text, too_long = self.parse_post_text(post_soup, post_subject)
+        post_text = self.parse_post_text(post_info)
         url = post_info.get_url()
         max_len = MessageLimit.CAPTION_LENGTH - 100
-        if too_long or len(post_text) >= max_len:
+        if len(post_text) >= max_len:
             post_text = self.safe_cut(post_text, max_len)
             await message.reply_text(f"警告！图片字符描述已经超过 {max_len} 个字，已经切割")
         post_text += f"\n\n[source]({url})"

@@ -22,7 +22,7 @@ class ResponseException(APIHelperException):
             self.message = message
             _message = message
         else:
-            self.code = response.get("retcode", self.code)
+            self.code = response.get("code", self.code)
             self.message = response.get("message", "")
             _message = f"[{self.code}] {self.message}"
 

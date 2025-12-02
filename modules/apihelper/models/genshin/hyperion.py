@@ -20,7 +20,7 @@ __all__ = (
     "HoYoPostMultiLang",
 )
 
-GAME_ID_MAP = {"bh3": 1, "ys": 2, "bh2": 3, "wd": 4, "dby": 5, "sr": 6, "zzz": 8, "hna": 9, "planet": 10}
+GAME_ID_MAP = {"endfield": 3}
 GAME_STR_MAP = {v: k for k, v in GAME_ID_MAP.items()}
 
 
@@ -53,7 +53,12 @@ class ArtworkImage(BaseModel):
                 width, height = image.size
                 min_px = min(width, height)
                 if min_px == height:
-                    return data
+                    bio = BytesIO()
+                    image = image.convert("RGB")
+                    image.save(bio, "JPEG", quality=95)
+                    kwargs["data"] = bio.getvalue()
+                    kwargs["file_extension"] = "jpg"
+                    return [ArtworkImage(*args, **kwargs)]
                 max_px = min_px * 2.2
                 need_crop = height if min_px == width else width
                 crop_num = int(need_crop / max_px)
@@ -87,9 +92,9 @@ class PostRecommend(BaseModel):
 
     @staticmethod
     def parse(data: Dict, gids: int, hoyolab: bool = False):
-        _post = data.get("post")
-        post_id = _post.get("post_id")
-        subject = _post.get("subject", "")
+        _post = data.get("item")
+        post_id = _post.get("id")
+        subject = _post.get("title", "")
         return PostRecommend(hoyolab=hoyolab, gids=gids, post_id=post_id, subject=subject)
 
     @property
@@ -102,8 +107,8 @@ class PostRecommend(BaseModel):
 
     def get_url(self) -> str:
         if not self.hoyolab:
-            return f"https://www.miyoushe.com/{self.short_name}/article/{self.post_id}"
-        return f"https://www.hoyolab.com/article/{self.post_id}"
+            return f"https://www.skland.com/article?id={self.post_id}"
+        return f"https://www.skport.com/article?id={self.post_id}"
 
     def get_fix_url(self) -> str:
         url = self.get_url()
@@ -117,55 +122,34 @@ class PostInfo(PostRecommend):
     image_urls: List[str]
     created_at: int
     video_urls: List[str]
-    content: str
+    format: dict
+    text_slice: List[dict]
+    link_slice: List[dict]
 
     def __init__(self, _data: dict, **data: Any):
         super().__init__(**data)
         self._data = _data
 
-    @staticmethod
-    def parse_structured_content(data: List[Dict]) -> str:
-        content = []
-        for item in data:
-            if not item or item.get("insert") is None:
-                continue
-            insert = item["insert"]
-            if isinstance(insert, str):
-                if attr := item.get("attributes"):
-                    if link := attr.get("link"):
-                        content.append(f'<p><a href="{link}">{insert}</a></p>')
-                        continue
-                content.append(f"<p>{insert}</p>")
-            elif isinstance(insert, dict):
-                if image := insert.get("image"):
-                    content.append(f'<img src="{image}" />')
-        return "\n".join(content)
-
     @classmethod
-    def paste_data(cls, data: dict, gids: int, hoyolab: bool = False) -> "PostInfo":
-        _data_post = data["post"]
-        post = _data_post["post"]
-        post_id = post["post_id"]
-        subject = post["subject"]
-        image_list = []
-        image_keys = {"cover_list", "image_list"}
-        for key in image_keys:
-            image_list.extend(_data_post.get(key, []))
+    def paste_data(cls, data: dict, hoyolab: bool = False) -> "PostInfo":
+        post = data["item"]
+        gids = post["gameId"]
+        post_id = post["id"]
+        subject = post["title"]
+        image_list = post.get("imageListSlice", [])
         image_urls = list(OrderedDict.fromkeys([image["url"] for image in image_list]))
-        key1, key2 = ("video", "resolution") if hoyolab else ("vod_list", "resolutions")
-        vod_list = _data_post.get(key1, [])
+        key1, key2 = ("video", "resolution") if hoyolab else ("videoListSlice", "resolutions")
+        vod_list = post.get(key1, [])
         if not isinstance(vod_list, list):
             vod_list = [vod_list]
-        video_urls = [vod[key2][-1]["url"] for vod in vod_list if vod]
-        created_at = post["created_at"]
-        user = _data_post["user"]  # 用户数据
-        user_uid = user["uid"]  # 用户ID
-        content = post["content"]
-        if hoyolab and ("<" not in content) and (structured_content := post.get("structured_content")):
-            content = PostInfo.parse_structured_content(ujson.loads(structured_content))
-        if hoyolab and post["view_type"] == 5:
-            # video
-            content = ujson.loads(content).get("describe", "")
+        video_urls = [vod[key2][0]["playURL"] for vod in vod_list if vod]
+        created_at = post["createdAtTs"]
+        user = data["user"]  # 用户数据
+        user_uid = user["id"]  # 用户ID
+
+        content_format = ujson.loads(post.get("format", "{}"))
+        text_slice = post.get("textSlice", [])
+        link_slice = post.get("linkSlice", [])
         return PostInfo(
             _data=data,
             gids=gids,
@@ -176,7 +160,9 @@ class PostInfo(PostRecommend):
             image_urls=image_urls,
             video_urls=video_urls,
             created_at=created_at,
-            content=content,
+            format=content_format,
+            text_slice=text_slice,
+            link_slice=link_slice,
         )
 
     def __getitem__(self, item):
