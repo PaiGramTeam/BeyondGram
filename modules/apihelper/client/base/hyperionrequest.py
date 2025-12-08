@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import httpx
 from httpx import Response
 
+from .device_fp import SklandDeviceFP
 from .httpxrequest import HTTPXRequest
 from ...error import NetworkException, ResponseException, APIHelperTimedOut
 from ...typedefs import POST_DATA, JSON_DATA
@@ -28,18 +29,23 @@ class HyperionRequest(HTTPXRequest):
         }
         super().__init__(*args, headers=headers, **kwargs)
 
-    async def request_token(self):
-        timestamp = str(int(time.time()) - 1)
+    async def get_headers(self, timestamp: str = None):
+        if timestamp is None:
+            timestamp = str(int(time.time()) - 1)
         headers = self.header_for_sign.copy()
+        headers["dId"] = await SklandDeviceFP.get_cached_device_id()
         headers["timestamp"] = timestamp
+        return headers
+
+    async def request_token(self):
+        headers = await self.get_headers()
         token = await self.get("https://zonai.skland.com/web/v1/auth/refresh", headers=headers, need_sign=False)
         self.token = token.get("token", "")
 
-    def generate_signature(self, path: str, body_or_query: str):
+    async def generate_signature(self, path: str, body_or_query: str):
         t = str(int(time.time()) - 1)
         _token = self.token.encode("utf-8")
-        header_ca = self.header_for_sign.copy()
-        header_ca["timestamp"] = t
+        header_ca = await self.get_headers(t)
         header_ca_str = json.dumps(header_ca, separators=(",", ":"))
         s = path + body_or_query + t + header_ca_str
         hex_s = hmac.new(_token, s.encode("utf-8"), hashlib.sha256).hexdigest()
@@ -52,9 +58,9 @@ class HyperionRequest(HTTPXRequest):
         h = old_header.copy()
         p = urlparse(url)
         if method.lower() == "get":
-            h["sign"], header_ca = self.generate_signature(p.path, p.query)
+            h["sign"], header_ca = await self.generate_signature(p.path, p.query)
         else:
-            h["sign"], header_ca = self.generate_signature(p.path, json.dumps(body))
+            h["sign"], header_ca = await self.generate_signature(p.path, json.dumps(body))
         h.update(header_ca)
         return h
 
