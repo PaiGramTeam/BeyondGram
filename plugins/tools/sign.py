@@ -88,7 +88,8 @@ class SignSystem(Plugin):
                 retry = 3
                 for ret in range(retry):
                     try:
-                        await client.claimed_rewards()
+                        await client.claim_daily_reward()
+                        break
                     except TimeoutException as e:
                         if ret == retry - 1:
                             raise e

@@ -35,8 +35,6 @@ async-timeout==5.0.1 ; python_full_version < '3.11.3'
     # via
     #   aiohttp
     #   redis
-asyncio==4.0.0
-    # via hypernet
 asyncmy==0.2.11
     # via paigram
 attrs==25.4.0
@@ -113,7 +111,7 @@ httpx==0.28.1
     #   hypernet
     #   paigram
     #   python-telegram-bot
-hypernet @ git+https://github.com/PaiGramTeam/HyperNet@2ab638025a14e8106889f6e57dc83936f5788b03
+hypernet @ git+https://github.com/PaiGramTeam/HyperNet@149c9379e30e9283360e5669370d2aa1d2be685b
     # via paigram
 idna==3.11
     # via

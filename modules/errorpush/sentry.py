@@ -68,5 +68,5 @@ class SentryClient:
 
     class monitor(sentry_monitor):  # noqa: N801
         def __init__(self, monitor_slug: str, monitor_config=None):
-            monitor_slug = f"ys_{monitor_slug.lower()}"
+            monitor_slug = f"zmd_{monitor_slug.lower()}"
             super().__init__(monitor_slug, monitor_config)
