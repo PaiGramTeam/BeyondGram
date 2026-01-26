@@ -7,14 +7,14 @@ from typing import Optional
 import aiofiles
 from httpx import HTTPError, TimeoutException
 from playwright.async_api import Error as PlaywrightError, TimeoutError as PlaywrightTimeoutError
-from simnet.errors import (
+from hypernet.errors import (
     DataNotPublic,
     BadRequest as SIMNetBadRequest,
     InvalidCookies,
     TooManyRequests,
     CookieException,
     TimedOut as SIMNetTimedOut,
-    SIMNetException,
+    HyperNetException as SIMNetException,
     NeedChallenge,
     InvalidDevice,
 )
@@ -100,7 +100,7 @@ class ErrorHandler(Plugin):
             )
             # recommend: channel alias
             if message and message.sender_chat:
-                content += "\n\n推荐使用 /channel_alias 开启频道透视模式，派蒙将会把你当做普通用户运行命令。"
+                content += "\n\n推荐使用 /channel_alias 开启频道透视模式，Bot 将会把你当做普通用户运行命令。"
         else:
             buttons = ReplyKeyboardRemove()
 
@@ -141,9 +141,9 @@ class ErrorHandler(Plugin):
         if isinstance(exc, TooManyRequests):
             notice = self.ERROR_MSG_PREFIX + "Cookie 无效，请尝试重新绑定"
         elif isinstance(exc, InvalidCookies):
-            if exc.retcode in (10001, -100):
+            if exc.ret_code in (10001, -100):
                 notice = self.ERROR_MSG_PREFIX + "Cookie 无效，请尝试重新绑定"
-            elif exc.retcode == 10103:
+            elif exc.ret_code == 10103:
                 notice = (
                     self.ERROR_MSG_PREFIX
                     + "Cookie 有效，但没有绑定到游戏帐户，请尝试登录通行证，在账号管理里面选择账号游戏信息，将原神设置为默认角色。"
@@ -152,7 +152,7 @@ class ErrorHandler(Plugin):
                 logger.error("未知Cookie错误", exc_info=exc)
                 notice = self.ERROR_MSG_PREFIX + f"Cookie 无效 错误信息为 {exc.original} 请尝试重新绑定"
         elif isinstance(exc, CookieException):
-            if exc.retcode == 0:
+            if exc.ret_code == 0:
                 notice = self.ERROR_MSG_PREFIX + "Cookie 已经被刷新，请尝试重试发送命令~"
             else:
                 logger.error("未知Cookie错误", exc_info=exc)
@@ -167,14 +167,14 @@ class ErrorHandler(Plugin):
                 "请打开米游社→我的角色中尝试手动通过验证。如仍然提示错误，请尝试重新绑定"
             )
         else:
-            if exc.retcode == -130:
+            if exc.ret_code == -130:
                 notice = self.ERROR_MSG_PREFIX + "未设置默认角色，请尝试重新绑定"
-            elif exc.retcode == -500001:
+            elif exc.ret_code == -500001:
                 notice = self.ERROR_MSG_PREFIX + "网络出小差了，请稍后重试~"
-            elif exc.retcode == -1:
+            elif exc.ret_code == -1:
                 logger.warning("内部数据库错误 [%s]%s", exc.ret_code, exc.original)
                 notice = self.ERROR_MSG_PREFIX + "系统内部数据库错误，请稍后重试~"
-            elif exc.retcode == -10001:  # 参数异常 不应该抛出异常 进入下一步处理
+            elif exc.ret_code == -10001:  # 参数异常 不应该抛出异常 进入下一步处理
                 pass
             else:
                 logger.error("GenshinException", exc_info=exc)

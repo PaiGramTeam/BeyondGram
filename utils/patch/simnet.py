@@ -1,12 +1,12 @@
-import simnet
+import hypernet
 from httpx import AsyncClient, Timeout, Limits
 
 from core.config import config
 from utils.patch.methods import patch, patchable
 
 
-@patch(simnet.GenshinClient)
-class GenshinClient:
+@patch(hypernet.EndfieldClient)
+class EndfieldClient:
     @patchable
     def __init__(self, *args, **kwargs):
         self.old___init__(*args, **kwargs)

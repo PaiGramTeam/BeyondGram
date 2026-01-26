@@ -9,7 +9,8 @@ from urllib.parse import urlparse
 import httpx
 from httpx import Response
 
-from .device_fp import SklandDeviceFP
+from hypernet import EndfieldClient
+
 from .httpxrequest import HTTPXRequest
 from ...error import NetworkException, ResponseException, APIHelperTimedOut
 from ...typedefs import POST_DATA, JSON_DATA
@@ -33,7 +34,7 @@ class HyperionRequest(HTTPXRequest):
         if timestamp is None:
             timestamp = str(int(time.time()) - 1)
         headers = self.header_for_sign.copy()
-        headers["dId"] = await SklandDeviceFP.get_cached_device_id()
+        headers["dId"] = await EndfieldClient.get_device_id()
         headers["timestamp"] = timestamp
         return headers
 

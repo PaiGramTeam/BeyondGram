@@ -7,17 +7,14 @@ from typing import Any, Optional
 from typing import TYPE_CHECKING, Union
 
 from pydantic import ValidationError
-from simnet import GenshinClient, Region
-from simnet.errors import (
+from hypernet import EndfieldClient, Region
+from hypernet.errors import (
     BadRequest as SimnetBadRequest,
     CookieException,
     InvalidCookies,
-    NeedChallenge,
     NetworkError,
 )
-from simnet.models.genshin.calculator import CalculatorCharacterDetails
-from simnet.models.genshin.chronicle.characters import Character
-from simnet.utils.player import recognize_game_biz
+from hypernet.utils.player import recognize_region
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import (
@@ -42,7 +39,6 @@ from core.dependence.redisdb import RedisDB
 from core.error import ServiceNotFoundError
 from core.plugin import Plugin, job
 from core.services.cookies.services import CookiesService, PublicCookiesService
-from core.services.devices import DevicesService
 from core.services.players.services import PlayersService
 from core.services.users.services import UserService
 from gram_core.services.cookies.models import CookiesStatusEnum
@@ -120,7 +116,7 @@ class CharacterDetails(Plugin):
         if data is None:
             return None
         json_data = str(data, encoding="utf-8")
-        return CalculatorCharacterDetails.parse_raw(json_data)
+        # return CalculatorCharacterDetails.parse_raw(json_data)
 
     async def set_character_details(self, player_id: int, character_id: int, data: str):
         randint = random.randint(1, 30)  # nosec
@@ -173,7 +169,8 @@ class CharacterDetails(Plugin):
             data = results.first()
             if data is not None:
                 try:
-                    return CalculatorCharacterDetails.parse_raw(data.data)
+                    # return CalculatorCharacterDetails.parse_raw(data.data)
+                    pass
                 except ValidationError as exc:
                     logger.error("解析数据出现异常 ValidationError", exc_info=exc)
                     await session.delete(data)
@@ -185,11 +182,11 @@ class CharacterDetails(Plugin):
         return None
 
     async def get_character_details(
-        self, client: "GenshinClient", character: "Union[int,Character]"
+        self, client: "EndfieldClient", character: "Union[int,Character]"
     ) -> Optional["CalculatorCharacterDetails"]:
         """缓存 character_details 并定时对其进行数据存储 当遇到 Too Many Requests 可以获取以前的数据"""
         uid = client.player_id
-        if isinstance(character, Character):
+        if isinstance(character, "Character"):
             character_id = character.id
         else:
             character_id = character
@@ -240,20 +237,18 @@ class GenshinHelper(Plugin):
         public_cookies: PublicCookiesService,
         user: UserService,
         player: PlayersService,
-        devices: DevicesService,
     ) -> None:
         self.cookies_service = cookies
         self.public_cookies_service = public_cookies
         self.user_service = user
         self.players_service = player
-        self.devices_service = devices
         if None in (temp := [self.user_service, self.cookies_service, self.players_service]):
             raise ServiceNotFoundError(*filter(lambda x: x is None, temp))
 
     @asynccontextmanager
     async def genshin(  # skipcq: PY-R1000 #
         self, user_id: int, region: Optional[RegionEnum] = None, player_id: int = None, offset: int = 0
-    ) -> collections.abc.AsyncGenerator[GenshinClient]:
+    ) -> collections.abc.AsyncGenerator[EndfieldClient]:
         player = await self.players_service.get_player(user_id, region, player_id, offset)
         if player is None:
             raise PlayerNotFoundError(user_id)
@@ -272,13 +267,6 @@ class GenshinHelper(Plugin):
         else:
             raise TypeError("Region is not None")
 
-        device_id: Optional[str] = None
-        device_fp: Optional[str] = None
-        devices = await self.devices_service.get(player.account_id)
-        if devices:
-            device_id = devices.device_id
-            device_fp = devices.device_fp
-
         async def _update_cookie_model():
             try:
                 await self.cookies_service.update(cookie_model)
@@ -290,14 +278,12 @@ class GenshinHelper(Plugin):
             except Exception as __exc:
                 logger.error("用户 user_id[%s] 更新 Cookies 失败", cookie_model.user_id, exc_info=__exc)
 
-        async with GenshinClient(
+        async with EndfieldClient(
             cookies,
             region=region,
             account_id=player.account_id,
             player_id=player.player_id,
             lang="zh-cn",
-            device_id=device_id,
-            device_fp=device_fp,
         ) as client:
             try:
                 yield client
@@ -309,20 +295,14 @@ class GenshinHelper(Plugin):
                 await _update_cookie_model()
                 raise CookieException(message="The cookie has been refreshed.") from exc
             except InvalidCookies as exc:
-                if exc.retcode == 10103:
-                    raise exc
                 refresh = False
                 cookie_model.status = CookiesStatusEnum.INVALID_COOKIES
-                stoken = client.cookies.get("stoken")
+                stoken = client.cookies.get("hg_token")
                 if stoken is not None:
                     try:
-                        old_cookies = cookie_model.data.copy()
-                        new_cookies = await client.get_all_token_by_stoken()
+                        new_cookies = await client.refresh_cookies_by_hg_token()
                         logger.success("用户 %s 刷新所有 token 成功", user_id)
                         new_cookies_dict = new_cookies.to_dict()
-                        # 保留云游戏相关字段
-                        cg_cookies = {k: v for k, v in old_cookies.items() if k.startswith("cg_")}
-                        new_cookies_dict.update(cg_cookies)
                         cookie_model.data = new_cookies_dict
                         cookie_model.status = CookiesStatusEnum.STATUS_SUCCESS
                     except ValueError as _exc:
@@ -345,15 +325,10 @@ class GenshinHelper(Plugin):
                 if refresh:
                     raise CookieException(message="The cookie has been refreshed.") from exc
                 raise exc
-            except NeedChallenge as exc:
-                if devices is not None:
-                    devices.is_valid = False
-                    await self.devices_service.update(devices)
-                raise exc
 
     async def get_genshin_client(
         self, user_id: int, region: Optional[RegionEnum] = None, player_id: int = None, offset: int = 0
-    ) -> GenshinClient:
+    ) -> EndfieldClient:
         player = await self.players_service.get_player(user_id, region, player_id, offset)
         if player is None:
             raise PlayerNotFoundError(user_id)
@@ -372,27 +347,18 @@ class GenshinHelper(Plugin):
         else:
             raise TypeError("Region is not None")
 
-        device_id: Optional[str] = None
-        device_fp: Optional[str] = None
-        devices = await self.devices_service.get(player.account_id)
-        if devices:
-            device_id = devices.device_id
-            device_fp = devices.device_fp
-
-        return GenshinClient(
+        return EndfieldClient(
             cookies,
             region=region,
             account_id=player.account_id,
             player_id=player.player_id,
             lang="zh-cn",
-            device_id=device_id,
-            device_fp=device_fp,
         )
 
     @asynccontextmanager
     async def public_genshin(
         self, user_id: int, region: Optional[RegionEnum] = None, uid: Optional[int] = None
-    ) -> GenshinClient:
+    ) -> EndfieldClient:
         if not (region or uid):
             player = await self.players_service.get_player(user_id, region)
             if player:
@@ -408,27 +374,13 @@ class GenshinHelper(Plugin):
         else:
             raise TypeError("Region is not `RegionEnum.NULL`")
 
-        device_id: Optional[str] = None
-        device_fp: Optional[str] = None
-        devices = await self.devices_service.get(cookies.account_id)
-        if devices:
-            device_id = devices.device_id
-            device_fp = devices.device_fp
-
-        async with GenshinClient(
+        async with EndfieldClient(
             cookies.data,
             region=region,
             player_id=uid,
             lang="zh-cn",
-            device_id=device_id,
-            device_fp=device_fp,
         ) as client:
-            try:
-                yield client
-            except NeedChallenge as exc:
-                await self.public_cookies_service.undo(user_id)
-                await self.public_cookies_service.set_device_valid(client.account_id, False)
-                raise exc
+            yield client
 
     @asynccontextmanager
     async def genshin_or_public(
@@ -437,24 +389,23 @@ class GenshinHelper(Plugin):
         region: Optional[RegionEnum] = None,
         uid: Optional[int] = None,
         offset: int = 0,
-    ) -> GenshinClient:
+    ) -> EndfieldClient:
         try:
             async with self.genshin(user_id, region, uid, offset) as client:
                 client.public = False
-                if uid and recognize_game_biz(uid, client.game) != recognize_game_biz(client.player_id, client.game):
+                if uid and recognize_region(uid, client.game) != recognize_region(client.player_id, client.game):
                     # 如果 uid 和 player_id 服务器不一致，说明是跨服的，需要使用公共的 cookies
                     raise CookiesNotFoundError(user_id)
                 yield client
         except (CookiesNotFoundError, PlayerNotFoundError):
             if uid:
-                if uid < 10:
-                    raise PlayerNotFoundError(user_id)
-                region = RegionEnum.HYPERION if uid < 600000000 else RegionEnum.HOYOLAB
+                try:
+                    r = recognize_region(uid, client.game)
+                except ValueError as exc:
+                    raise PlayerNotFoundError(uid) from exc
+                region = RegionEnum.HYPERION if r is Region.CHINESE else RegionEnum.HOYOLAB
             if uid is None and region is None:
                 raise PlayerNotFoundError(user_id)
             async with self.public_genshin(user_id, region, uid) as client:
-                try:
-                    client.public = True
-                    yield client
-                except NeedChallenge as exc:
-                    raise CookiesNotFoundError(user_id) from exc
+                client.public = True
+                yield client
