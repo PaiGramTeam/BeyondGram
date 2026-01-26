@@ -35,7 +35,7 @@ class SetCommandPlugin(Plugin):
             # BotCommand("pay_log_delete", "删除充值记录"),
             # BotCommand("beyond_wish_log", "查看颂愿抽卡记录"),
             # Cookie 查询类
-            # BotCommand("sign", "森空岛每日签到"),
+            BotCommand("sign", "森空岛每日签到"),
             # BotCommand("dailynote_tasks", "自动便笺提醒"),
             # 其他
             # BotCommand("setuid", "添加/重设UID"),
@@ -68,7 +68,7 @@ class SetCommandPlugin(Plugin):
             # BotCommand("refresh_metadata", "刷新元数据"),
             BotCommand("save_entry", "保存条目数据"),
             BotCommand("remove_all_entry", "删除全部条目数据"),
-            # BotCommand("sign_all", "全部账号重新签到"),
+            BotCommand("sign_all", "全部账号重新签到"),
             # BotCommand("refresh_all_history", "全部账号刷新历史记录"),
             BotCommand("send_log", "发送日志"),
             BotCommand("update", "更新"),

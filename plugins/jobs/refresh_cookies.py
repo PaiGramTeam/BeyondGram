@@ -31,7 +31,7 @@ class RefreshCookiesJob(Plugin):
     def __init__(self, cookies: CookiesService):
         self.cookies = cookies
 
-    @job.run_daily(time=datetime.time(hour=0, minute=1, second=0), name="RefreshCookiesJob")
+    @job.run_daily(time=datetime.time(hour=0, minute=2, second=0), name="RefreshCookiesJob")
     @SentryClient.monitor(monitor_slug="RefreshCookiesJob")
     async def daily_refresh_cookies(self, _: "ContextTypes.DEFAULT_TYPE"):
         logger.info("正在执行每日刷新 Cookies 任务")
