@@ -1090,7 +1090,7 @@ wheels = [
 [[package]]
 name = "hypernet"
 version = "0.2.0"
-source = { git = "https://github.com/PaiGramTeam/HyperNet#3866171007c6ed51c260599e9df3e2add2664e59" }
+source = { git = "https://github.com/PaiGramTeam/HyperNet#2ab638025a14e8106889f6e57dc83936f5788b03" }
 dependencies = [
     { name = "asyncio" },
     { name = "httpx" },

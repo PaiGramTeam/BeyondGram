@@ -113,7 +113,7 @@ httpx==0.28.1
     #   hypernet
     #   paigram
     #   python-telegram-bot
-hypernet @ git+https://github.com/PaiGramTeam/HyperNet@3866171007c6ed51c260599e9df3e2add2664e59
+hypernet @ git+https://github.com/PaiGramTeam/HyperNet@2ab638025a14e8106889f6e57dc83936f5788b03
     # via paigram
 idna==3.11
     # via
