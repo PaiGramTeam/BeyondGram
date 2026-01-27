@@ -36,10 +36,10 @@ class SetCommandPlugin(Plugin):
             # BotCommand("beyond_wish_log", "查看颂愿抽卡记录"),
             # Cookie 查询类
             BotCommand("sign", "森空岛每日签到"),
-            # BotCommand("dailynote_tasks", "自动便笺提醒"),
+            BotCommand("dailynote_tasks", "自动便笺提醒"),
             # 其他
             # BotCommand("setuid", "添加/重设UID"),
-            # BotCommand("setcookie", "添加/重设Cookie"),
+            BotCommand("setcookie", "添加/重设 Token"),
             BotCommand("player", "管理用户绑定玩家"),
             # BotCommand("redeem", "兑换 Key"),
             BotCommand("privacy", "隐私政策"),
@@ -56,7 +56,7 @@ class SetCommandPlugin(Plugin):
             # BotCommand("stats", "玩家统计查询"),
             # BotCommand("player_card", "查询角色卡片"),
             # Cookie 查询类
-            # BotCommand("dailynote", "查询实时便笺"),
+            BotCommand("dailynote", "查询实时便笺"),
             # BotCommand("avatars", "查询角色练度"),
             # BotCommand("reg_time", "账号注册时间"),
             BotCommand("cookies_import", "从其他 BOT 导入账号信息"),

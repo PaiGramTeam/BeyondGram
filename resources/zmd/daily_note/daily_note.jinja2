@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8"/>
+    <link rel="shortcut icon" href="#"/>
+    <link rel="stylesheet" type="text/css" href="./daily_note.css"/>
+</head>
+<body>
+<div class="container" id="container">
+    <div class="title">
+        <div class="id">
+            <span>ID：{{ uid }}</span>
+        </div>
+        <div class="day">
+            <span>{{ day }}</span>
+        </div>
+    </div>
+    <div class="item">
+        <div class="main">
+            <div class="bg"></div>
+            <img class="icon" src="items/理智.webp" alt=""/>
+            <div class="info">
+                <div class="name">理智</div>
+                <div class="time">
+                    {% if resin_recovery_time %}
+                        将于 {{ resin_recovery_time }} 全部恢复
+                    {% else %}
+                        理智已完全恢复
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="right">
+          <span class="{% if current_resin/(max_resin or 1) > 0.9 %}red{% endif %}">
+            {{ current_resin }}/{{ max_resin }}
+          </span>
+        </div>
+    </div>
+    <div class="item">
+        <div class="main">
+            <div class="bg"></div>
+            <img class="icon" src="items/活跃度.webp" alt=""/>
+            <div class="info">
+                <div class="name">活跃度</div>
+                <div class="time">
+                    {% if current_train_score != max_train_score %}
+                        未完成
+                    {% else %}
+                        已完成
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="right">
+          <span class="{% if current_train_score != max_train_score %}red{% endif %}">
+            {{ current_train_score }}/{{ max_train_score }}
+          </span>
+        </div>
+    </div>
+    <div class="item">
+        <div class="main">
+            <div class="bg"></div>
+            <img class="icon" src="items/通行证.webp" alt=""/>
+            <div class="info">
+                <div class="name">通行证</div>
+            </div>
+        </div>
+        <div class="right">
+            <span>
+                {{ bp_current }}/{{ bp_total }}
+            </span>
+        </div>
+    </div>
+</div>
+</body>
+<script type="text/javascript"></script>
+</html>
