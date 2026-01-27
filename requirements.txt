@@ -111,7 +111,7 @@ httpx==0.28.1
     #   hypernet
     #   paigram
     #   python-telegram-bot
-hypernet @ git+https://github.com/PaiGramTeam/HyperNet@149c9379e30e9283360e5669370d2aa1d2be685b
+hypernet @ git+https://github.com/PaiGramTeam/HyperNet@e9f0fe75d14fe97d18e6957b486f695307d39c5e
     # via paigram
 idna==3.11
     # via
@@ -152,7 +152,7 @@ packaging==26.0
     # via
     #   black
     #   pytest
-pathspec==1.0.3
+pathspec==1.0.4
     # via black
 pillow==10.4.0
     # via paigram
