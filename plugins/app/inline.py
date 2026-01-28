@@ -209,7 +209,8 @@ class Inline(Plugin):
                         )
                     )
             else:
-                simple_search_results = await self.search_service.search(args[0])
+                # simple_search_results = await self.search_service.search(args[0])
+                simple_search_results = []
                 if simple_search_results:
                     results_list.append(
                         InlineQueryResultArticle(

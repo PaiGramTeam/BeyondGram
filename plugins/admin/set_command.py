@@ -53,7 +53,7 @@ class SetCommandPlugin(Plugin):
             # BotCommand("strategy", "查询角色攻略"),
             # BotCommand("material", "角色培养素材查询"),
             # UID 查询类
-            # BotCommand("stats", "玩家统计查询"),
+            BotCommand("stats", "玩家统计查询"),
             # BotCommand("player_card", "查询角色卡片"),
             # Cookie 查询类
             BotCommand("dailynote", "查询实时便笺"),
