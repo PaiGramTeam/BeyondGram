@@ -111,7 +111,7 @@ httpx==0.28.1
     #   hypernet
     #   paigram
     #   python-telegram-bot
-hypernet @ git+https://github.com/PaiGramTeam/HyperNet@6f0729093f3db807ef309936133374c3845ff083
+hypernet @ git+https://github.com/PaiGramTeam/HyperNet@b0ef21067dc578826dabace6218dc309425ec55b
     # via paigram
 idna==3.11
     # via
@@ -228,7 +228,7 @@ requests-oauthlib==2.0.0
     # via mwclient
 rich==14.3.1
     # via paigram
-sentry-sdk==2.50.0
+sentry-sdk==2.51.0
     # via paigram
 six==1.17.0
     # via python-dateutil

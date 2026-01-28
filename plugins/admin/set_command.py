@@ -41,7 +41,7 @@ class SetCommandPlugin(Plugin):
             # BotCommand("setuid", "添加/重设UID"),
             BotCommand("setcookie", "添加/重设 Token"),
             BotCommand("player", "管理用户绑定玩家"),
-            # BotCommand("redeem", "兑换 Key"),
+            BotCommand("redeem", "兑换 Key"),
             BotCommand("privacy", "隐私政策"),
         ]
         group_command = [
