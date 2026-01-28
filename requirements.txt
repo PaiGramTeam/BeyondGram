@@ -43,7 +43,7 @@ beautifulsoup4==4.14.3
     # via paigram
 black==24.10.0
     # via paigram
-cachetools==6.2.5
+cachetools==6.2.6
     # via python-telegram-bot
 certifi==2026.1.4
     # via
@@ -111,7 +111,7 @@ httpx==0.28.1
     #   hypernet
     #   paigram
     #   python-telegram-bot
-hypernet @ git+https://github.com/PaiGramTeam/HyperNet@e9f0fe75d14fe97d18e6957b486f695307d39c5e
+hypernet @ git+https://github.com/PaiGramTeam/HyperNet@6f0729093f3db807ef309936133374c3845ff083
     # via paigram
 idna==3.11
     # via
