@@ -245,7 +245,7 @@ class AccountCookiesPlugin(Plugin.Conversation):
                     lab_user_id = await client.get_lab_show_user_id()
                     cookies.lab_show_user_id = lab_user_id
                     logger.success("获取用户 %s[%s] lab_user_id[%s] 成功", user.full_name, user.id, lab_user_id)
-                account_cookies_plugin_data.account_id = int(cookies.lab_show_user_id)
+                account_cookies_plugin_data.account_id = int(cookies.lab_user_id)
 
                 accounts = await client.get_endfield_accounts()
                 genshin_accounts = []

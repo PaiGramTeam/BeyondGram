@@ -36,7 +36,7 @@ class PlayerStatsPlugins(Plugin):
         message = update.effective_message
         self.log_user(update, logger.info, "查询游戏用户命令请求")
         try:
-            async with self.helper.genshin_or_public(user_id, uid=uid, offset=offset) as client:
+            async with self.helper.genshin(user_id, player_id=uid, offset=offset) as client:
                 render_result = await self.render(client, client.player_id)
         except TooManyRequestPublicCookies:
             await message.reply_text("用户查询次数过多 请稍后重试")
@@ -118,9 +118,7 @@ class PlayerStatsPlugins(Plugin):
         self.log_user(update, logger.info, "查询游戏用户命令请求")
         notice = None
         try:
-            async with self.helper.genshin_or_public(user_id, uid=uid) as client:
-                if not client.public:
-                    await client.get_record_cards()
+            async with self.helper.genshin_or_public(user_id, player_id=uid) as client:
                 render_result = await self.render(client, client.player_id)
         except TooManyRequestPublicCookies:
             notice = "用户查询次数过多 请稍后重试"

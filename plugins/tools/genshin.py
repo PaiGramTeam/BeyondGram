@@ -350,7 +350,7 @@ class GenshinHelper(Plugin):
         return EndfieldClient(
             cookies,
             region=region,
-            account_id=player.account_id,
+            # account_id=player.account_id,
             player_id=player.player_id,
             lang="zh-cn",
         )
